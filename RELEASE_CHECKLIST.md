@@ -77,22 +77,23 @@ Adapt IdentityManager for OSSN 9.9
 Suggested tag:
 
 ```text
-v1.0.3
+v1.0.4
 ```
 
 Suggested release title:
 
 ```text
-IdentityManager 1.0.3 - OSSN 9.9 compatibility
+IdentityManager 1.0.4 - OSSN installer packaging fix
 ```
 
 ## Release Notes Template
 
 ```text
-IdentityManager 1.0.3
+IdentityManager 1.0.4
 
 Changes:
-- Adds OSSN 9.9 compatibility metadata.
+- Rebuilds the OSSN release ZIP with Linux-safe archive paths.
+- Keeps OSSN 9.9 compatibility metadata.
 - Validates identity display modes before saving/applying settings.
 - Honors admin context settings and exclusions.
 - Improves runtime display handling for OSSN white theme name fields.

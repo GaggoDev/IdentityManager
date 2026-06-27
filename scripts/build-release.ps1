@@ -92,21 +92,37 @@ Get-ChildItem -LiteralPath $RepoRoot -Force | Where-Object {
 	Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $ComponentStage $_.Name) -Recurse -Force
 }
 
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 if (Test-Path -LiteralPath $ZipPath) {
 	Remove-Item -LiteralPath $ZipPath -Force
 }
 
-Push-Location -LiteralPath $BuildRoot
+$Zip = [System.IO.Compression.ZipFile]::Open($ZipPath, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
-	Compress-Archive -LiteralPath ".\$ComponentId" -DestinationPath $ZipPath -Force
+	$BasePath = [System.IO.Path]::GetFullPath($BuildRoot).TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+	$Files = Get-ChildItem -LiteralPath $ComponentStage -Recurse -File
+	foreach ($File in $Files) {
+		$FullName = [System.IO.Path]::GetFullPath($File.FullName)
+		$EntryName = $FullName.Substring($BasePath.Length).Replace('\', '/')
+		[System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+			$Zip,
+			$FullName,
+			$EntryName,
+			[System.IO.Compression.CompressionLevel]::Optimal
+		) | Out-Null
+	}
 } finally {
-	Pop-Location
+	$Zip.Dispose()
 }
 
-Add-Type -AssemblyName System.IO.Compression.FileSystem
 $Zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
 try {
-	$EntryNames = $Zip.Entries | ForEach-Object { $_.FullName -replace '\\', '/' }
+	$EntryNames = $Zip.Entries | ForEach-Object { $_.FullName }
+	$BackslashEntries = $EntryNames | Where-Object { $_ -match '\\' }
+	if ($BackslashEntries) {
+		throw "Release ZIP contains Windows path separators: $($BackslashEntries[0])"
+	}
 	$RequiredEntries = @("$ComponentId/ossn_com.php", "$ComponentId/ossn_com.xml")
 	foreach ($Entry in $RequiredEntries) {
 		if ($EntryNames -notcontains $Entry) {
